@@ -1,0 +1,227 @@
+unit Unit1;
+
+{$mode objfpc}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,ExtCtrls;
+
+{const
+  lol = 24;//длина клетки
+  mas = 20;//массив      }
+
+type
+
+  TPoint = record
+    number:integer;
+    eat:boolean;
+    tip:string;
+  end;
+
+    Cell = record
+      Wall:boolean;
+      Spawn:boolean;
+      GSpawn:boolean;
+      Point:TPoint;
+    end;
+
+    TLine = array[1..50] of Cell;
+    TMap = array[1..50] of TLine;
+
+  { TForm1 }
+
+  TForm1 = class(TForm)
+    Button1: TButton;
+    procedure Button1Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+  private
+    { private declarations }
+  public
+    { public declarations }
+  end;
+  TPacMan = class(TObject)
+    x,y:integer;//координаты
+    direction1,direction2:string;//направление движения
+    score:integer;//счет
+    speed:integer;
+    life:integer;
+    immune:integer;
+    {super:boolean;}
+  private
+  public
+    constructor Create(xx,yy:integer);
+    destructor Free();
+    procedure Show(Image:TImage);
+    procedure UnShow(Image:TImage);
+  end;
+
+  TGhost = class(TObject)
+    x,y:integer;
+    xb,yb:integer;
+    col:TColor;//цвет
+    direction:string;//направление движения
+    speed:integer;
+  private
+  public
+    constructor Create(xx,yy:integer);
+    destructor Free();
+    procedure Show(Image:TImage);
+    procedure UnShow(Image:TImage);
+  end;
+
+procedure Readi(var Map:TMap); //
+
+var
+  Form1: TForm1;
+  Map:TMap;
+  PacMan:TPacMan;
+  Ghosts:array[1..10] of TGhost;
+  kolvo:integer;//количество призраков
+  nummap:integer;//номер карты
+  lol,mas:integer;
+  pacsp,ghosp,gamesp:integer;
+implementation
+
+{$R *.lfm}
+
+{ TForm1 }
+uses unit2;
+
+constructor TPacMan.Create(xx,yy:integer);
+begin
+  x:=xx;
+  y:=yy;
+  direction1:='stay';
+  direction2:='stay';
+  score:=0;
+  life:=3;
+  speed:=pacsp;
+  immune:=0;
+end;
+
+destructor TPacMan.free();
+begin
+end;
+
+procedure TPacMan.Show(Image:TImage);
+begin
+  Image.Canvas.brush.color:=clYellow;
+  image.canvas.Ellipse(x,y,x-unit1.lol,y-unit1.lol);
+end;
+
+procedure TPacMan.UnShow(Image:TImage);
+begin
+  Image.Canvas.brush.color:=clBlack;
+  image.canvas.Ellipse(x,y,x-unit1.lol,y-unit1.lol);
+end;
+
+constructor TGhost.Create(xx,yy:integer);
+begin
+  x:=xx;
+  xb:=x;
+  y:=yy;
+  yb:=y;
+  direction:='stay';
+  speed:=ghosp;
+  col:=clblue;
+end;
+
+destructor TGhost.free();
+begin
+end;
+
+procedure TGhost.Show(Image:TImage);
+begin
+  Image.Canvas.brush.color:=col;
+  image.canvas.Rectangle(x-2,y-2,x-unit1.lol+2,y-unit1.lol+2);
+end;
+
+procedure TGhost.UnShow(Image:TImage);
+begin
+  Image.Canvas.brush.color:=clBlack;
+  image.canvas.Rectangle(x-2,y-2,x-unit1.lol+2,y-unit1.lol+2);
+end;
+
+procedure Readi(var Map:TMap);
+var i,j,p,err:integer;
+    t:textfile;
+    s,s1,tex,st:string;
+begin
+  kolvo:=0;    //почистить всю матрицу
+  p:=0;
+  nummap:=nummap+1;
+  case nummap of
+    1:tex:='Map1.txt';
+    2:tex:='Map2.txt';
+    3:tex:='Map3.txt';
+    4:tex:='Map4.txt';
+    5:tex:='Map5.txt';
+  end;
+  assign(t,tex);
+  reset(t);
+  //|*|\\
+  repeat
+    p:=p+1;
+    readln(t,s);
+    if p = 1 then
+      begin
+        st:=copy(s,8,length(s)-8+1);
+        val(st,pacsp,err);
+      end;
+    if p = 2 then
+      begin
+        st:=copy(s,8,length(s)-8+1);
+        val(st,ghosp,err);
+      end;
+    if p = 3 then //можно было и case...
+      begin
+        st:=copy(s,10,length(s)-10+1);
+        val(st,mas,err);
+      end;
+    if p = 4 then
+      begin
+        st:=copy(s,9,length(s)-9+1);
+        val(st,lol,err);
+      end;
+    if p = 5 then
+      begin
+        st:=copy(s,11,length(s)-11+1);
+        val(st,gamesp,err);
+      end;
+  until s='Map';
+  for i:=1 to mas do
+  begin
+    readln(t,s);
+    for j:=1 to mas do
+    begin
+      s1:=copy(s,j,1);
+      case s1 of
+        '6':begin map[j,i].gspawn:=true; map[j,i].point.eat:=false; kolvo:=kolvo+1; Map[j,i].point.tip:='normal'; Map[j,i].Point.number:=10; map[j,i].spawn:=false; map[j,i].wall:=false; end;
+        '0':begin map[j,i].wall:=true; map[j,i].point.eat:=true; map[j,i].spawn:=false; map[j,i].gspawn:=false; end;
+        '2':begin Map[j,i].point.tip:='normal'; Map[j,i].Point.eat:=false; Map[j,i].Point.number:=10; map[j,i].wall:=false; map[j,i].spawn:=false; map[j,i].gspawn:=false; end;
+        '5':begin map[j,i].point.tip:='+life'; map[j,i].point.eat:=false; map[j,i].point.number:=100; map[j,i].wall:=false; map[j,i].spawn:=false; map[j,i].gspawn:=false; end;
+        '3':begin map[j,i].point.tip:='super'; map[j,i].point.eat:=false; map[j,i].point.number:=1000; map[j,i].wall:=false; map[j,i].spawn:=false; map[j,i].gspawn:=false; end;
+        '4':begin map[j,i].point.tip:='+immune'; map[j,i].point.eat:=false; map[j,i].point.number:=100; map[j,i].wall:=false; map[j,i].spawn:=false; map[j,i].gspawn:=false; end;
+        '1':begin map[j,i].spawn:=true; map[j,i].point.eat:=true; map[j,i].wall:=false; map[j,i].gspawn:=false; end;
+      end;
+    end;
+  end;
+  close(t);
+end;
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  lol:=50;
+  mas:=40;
+  nummap:=0;
+  Readi(Map);
+end;
+
+procedure TForm1.Button1Click(Sender: TObject);
+begin
+  form2.Timer1.Enabled:=true;
+  form2.showmodal;
+end;
+
+end.
